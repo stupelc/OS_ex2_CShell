@@ -19,11 +19,11 @@ int AfterSpling(char *line, char **execute);
 
 void ExitCall();
 
-void CdCall(char **execute, int numOfArgs);
+void CdCall(char **execute);
 
 void JobsCall(Job_Array *jobs, int *numOfJobs);
 
-// previous_pwd - path to previous working directory
+// previous_pwd - path to previous working directory for cd -
 char previousPwd[MAX_MESS] = "not set";
 
 int main() {
@@ -47,20 +47,8 @@ int main() {
         //saves the operation in op
         strcpy(op, operation);
 
-        //for a path with spaces
-//        if (strchr(operation, '\"')!=NULL) {
-//            token=strtok(operation,"\"");
-//            //split the command and append token to array arguments
-//            while (token){
-//                ar
-//            }
-//
-//        }
-
         //splits our message to args. length is the number of args
-
         int length = AfterSpling(operation, args);
-        token = args[0];
 
         token = strtok(op, "&");
 
@@ -74,7 +62,7 @@ int main() {
         if ((strcmp(args[0], "exit")) == 0) {
             ExitCall();
         } else if ((strcmp(args[0], "cd")) == 0) {
-            CdCall(args, length);
+            CdCall(args);
         } else if ((strcmp(args[0], "jobs")) == 0) {
             JobsCall(jobs, &numOfJobs);
         } else {
@@ -106,54 +94,38 @@ int main() {
 
 //take a string and split and split it to an array of string
 int AfterSpling(char *line, char **execute) {
-//    char *buffer;
-//    size_t pos = 0;
-//    int numOfArgs = 0;
-//    buffer = strtok(line, " , \n");
-//    execute[pos++] = buffer;
-//    while (buffer != NULL) {
-//        buffer = strtok(NULL, " ,\n");
-//        execute[pos++] = buffer;
-//        numOfArgs++;
-//    }
-//    return numOfArgs;
-
-    char *token;
-    size_t spaces = 0;
-    int numArgs = 0;
+    char *buffer;
+    size_t pos = 0;
+    int numOfArgs = 0;
 
     if (strchr(line, '\"') != NULL) {
-        token = strtok(line, "\"");
+        buffer = strtok(line, "\"");
         // split command and append tokens to array arguments
-        while (token) {
-            execute[spaces] = token;
-            token = strtok(NULL, "\"");
-            spaces++;
-            numArgs++;
+        while (buffer) {
+            execute[pos++] = buffer;
+            buffer = strtok(NULL, "\"");
         }
         execute[0] = "cd";
     } else if (strchr(line, '\'') != NULL) {
-        token = strtok(line, "\'");
+        buffer = strtok(line, "\'");
         // split command and append tokens to array arguments
-        while (token) {
-            execute[spaces] = token;
-            token = strtok(NULL, "\'");
-            spaces++;
-            numArgs++;
+        while (buffer) {
+            execute[pos++] = buffer;
+            buffer = strtok(NULL, "\'");
         }
         execute[0] = "cd";
     } else {
-        token = strtok(line, " ");
-        // split command and append tokens to array arguments
-        while (token) {
-            execute[spaces] = token;
-            token = strtok(NULL, " ");
-            spaces++;
-            numArgs++;
+
+        buffer = strtok(line, " , \n");
+        execute[pos++] = buffer;
+        while (buffer != NULL) {
+            buffer = strtok(NULL, " ,\n");
+            execute[pos++] = buffer;
+            numOfArgs++;
         }
     }
+    return numOfArgs;
 
-    return numArgs;
 }
 
 void ExitCall() {
@@ -162,7 +134,7 @@ void ExitCall() {
     exit(0);
 }
 
-void CdCall(char **execute, int numOfArgs) {
+void CdCall(char **execute) {
     pid_t currentPID = getpid();
     printf("%d\n", currentPID);
 
@@ -173,7 +145,7 @@ void CdCall(char **execute, int numOfArgs) {
     }
     // for global path:
     // "cd" or "cd ~ ..."
-    if (strcmp(execute[0], "cd") == 0 || strcmp(execute[1], "~") == 0) {
+    if ((execute[1] == NULL) || (!strcmp(execute[1], "~"))) {
         // set working directory to HOME for global
         if (chdir(getenv("HOME")) != -1) {
             // if successfully changed wd to home, update prev p working dir
